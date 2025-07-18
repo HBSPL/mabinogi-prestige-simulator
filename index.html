@@ -205,7 +205,13 @@ function upgrade(type) {
   if (type === 'edge2prest') {
     if (state.edge < 2) return log("❌ 엣지 부족", "fail");
     const cost = parseMoney(document.getElementById("cost_edge2prest").value);
-    if (state.balance < cost) return log("❌ 잔고 부족", "fail");
+    if (state.balance < cost) {
+      log("❌ 잔고 부족", "fail");
+      if (state.prestige < 4) {
+        alert("❗당신의 운이라면 구매하는 걸 추천합니다.");
+      }
+      return;
+    }
     const targetRate = getDynamicRate(0.05);
     simulateFakeUsers(0.05);
     state.edge -= 2;
