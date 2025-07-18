@@ -157,6 +157,7 @@ function buy(type) {
     log(`❌ 잔고 부족`, "fail");
   }
   updateStatus();
+  saveState();
 }
 
 function upgrade(type) {
@@ -209,6 +210,21 @@ function upgrade(type) {
   }
 
   updateStatus();
+  saveState();
+}
+function saveState() {
+  localStorage.setItem("simulatorState", JSON.stringify(state));
+}
+
+function loadState() {
+  const saved = localStorage.getItem("simulatorState");
+  if (saved) {
+    try {
+      state = JSON.parse(saved);
+    } catch (e) {
+      console.error("불러오기 실패, 기본값으로 초기화됨");
+    }
+  }
 }
 
 function updateStatus() {
@@ -260,13 +276,16 @@ function reset() {
     trend2edge_attempts: 0,
     trend2edge_success: 0
   };
-  document.getElementById("log").innerHTML = "";
+  localStorage.removeItem("simulatorState"); // 상태 초기화
   localStorage.setItem("totalAttempts", "0");
   localStorage.setItem("totalSuccesses", "0");
+  document.getElementById("log").innerHTML = "";
+  saveState();
   updateStatus();
 }
 
-reset();
+loadState();
+updateStatus();
 </script>
 
 </body>
