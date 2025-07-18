@@ -2,127 +2,205 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>변동 확률 시뮬레이터</title>
+  <title>파이널 데스티 시뮬레이터</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
-    input, button { font-size: 1rem; padding: .4rem; margin: .2rem; }
-    .section { border: 1px solid #ccc; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; }
-    .log { white-space: pre-wrap; background: #f9f9f9; padding: .5rem; height: 8em; overflow-y: auto; }
+    body { font-family: sans-serif; max-width: 700px; margin: 20px auto; }
+    input, button { font-size: 1rem; padding: .4rem; margin: .3rem 0; }
+    input[type="text"] { width: 200px; }
+    .log { white-space: pre-wrap; background: #f1f1f1; padding: 10px; height: 200px; overflow-y: auto; border: 1px solid #ccc; }
+    .success { color: red; }
+    .fail { color: blue; }
   </style>
 </head>
 <body>
 
-  <h1>넥슨식 변동 확률 시뮬레이터</h1>
+<h1>🎲 파이널 데스티 시뮬레이터</h1>
 
-  <div class="section">
-    <h2>설정</h2>
-    <label>목표 확률 (트렌드→엣지) <input id="targetTrend" type="number" value="10" min="0" max="100">%</label><br>
-    <label>목표 확률 (엣지→프레스티지) <input id="targetPrest" type="number" value="5" min="0" max="100">%</label><br>
-    <label>가상 시뮬레이션 범위 <input id="fakeMin" type="number" value="100" min="1"> ~ <input id="fakeMax" type="number" value="200" min="1"> 회</label>
-  </div>
+<div>
+  <label>💰 초기 잔고: <input id="balance_start" type="text" value="3,000,000,000"></label><br>
+  <label>👕 트렌드 1개 가격: <input id="trend_price" type="text" value="2,500,000"></label><br>
+  <label>🧥 엣지 1개 가격: <input id="edge_price" type="text" value="40,000,000"></label><br>
+  <label>👑 프레스티지 시장가: <input id="prest_price" type="text" value="600,000,000"></label><br>
+  <label>💵 트렌드→엣지 비용: <input id="cost_trend2edge" type="text" value="2,000,000"></label><br>
+  <label>💵 엣지→프레스티지 비용: <input id="cost_edge2prest" type="text" value="4,200,000"></label>
+</div>
 
-  <div class="section">
-    <h2>단계별 도전</h2>
-    <button onclick="tryUpgrade('trend')">트렌드 → 엣지 도전</button>
-    <button onclick="tryUpgrade('prest')">엣지 → 프레스티지 도전</button>
-  </div>
+<hr>
 
-  <div class="section">
-    <h2>현재 상태</h2>
-    <p>누적 시도: <span id="totalAttempts">0</span> 회</p>
-    <p>누적 성공: <span id="totalSuccesses">0</span> 회</p>
-    <p>실제 적용 확률: <span id="currentRate">-</span>%</p>
-  </div>
+<div>
+  <button onclick="buy('trend')">트렌드 구매</button>
+  <button onclick="buy('edge')">엣지 구매</button>
+</div>
+<div>
+  <button onclick="upgrade('trend2edge')">트렌드→엣지 도전</button>
+  <button onclick="upgrade('edge2prest')">엣지→프레스티지 도전</button>
+</div>
+<button onclick="reset()">🔄 초기화</button>
 
-  <div class="section">
-    <h2>로그</h2>
-    <div id="log" class="log"></div>
-    <button onclick="resetAll()">🗑 초기화</button>
-  </div>
+<h3>📊 결과</h3>
+<div id="status"></div>
+<h3>📣 로그</h3>
+<div class="log" id="log"></div>
 
-  <script>
-    // 초기화
-    function initStorage() {
-      if (!localStorage.getItem('totalAttempts')) {
-        localStorage.setItem('totalAttempts', '0');
-        localStorage.setItem('totalSuccesses', '0');
-      }
-      updateDisplay();
+<script>
+let state = {
+  balance: 0,
+  trend: 0,
+  edge: 0,
+  prestige: 0,
+  spent: 0,
+  prestige_success: 0,
+  prestige_attempts: 0
+};
+
+function parseMoney(str) {
+  return parseInt(str.replace(/,/g, '')) || 0;
+}
+
+function formatMoney(num) {
+  return num.toLocaleString();
+}
+
+function getDynamicRate(target) {
+  const attempts = parseInt(localStorage.getItem("totalAttempts") || "0");
+  const successes = parseInt(localStorage.getItem("totalSuccesses") || "0");
+  if (attempts === 0) return target;
+
+  const actual = successes / attempts;
+  const coef = 2;
+  let adj = (target - actual) * coef;
+  let result = target + adj;
+  return Math.max(0.001, Math.min(1.0, result));
+}
+
+function simulateFakeUsers(rate) {
+  const count = Math.floor(Math.random() * 101) + 100;
+  let attempts = parseInt(localStorage.getItem("totalAttempts") || "0");
+  let successes = parseInt(localStorage.getItem("totalSuccesses") || "0");
+
+  for (let i = 0; i < count; i++) {
+    attempts++;
+    if (Math.random() < rate) successes++;
+  }
+
+  localStorage.setItem("totalAttempts", attempts);
+  localStorage.setItem("totalSuccesses", successes);
+}
+
+function buy(type) {
+  const price = parseMoney(document.getElementById(type + "_price").value);
+  if (state.balance >= price) {
+    state[type]++;
+    state.balance -= price;
+    state.spent += price;
+    log(`✅ ${type === 'trend' ? '트렌드' : '엣지'} 1개 구매`, "success");
+  } else {
+    log(`❌ 잔고 부족`, "fail");
+  }
+  updateStatus();
+}
+
+function upgrade(type) {
+  if (type === 'trend2edge') {
+    if (state.trend < 3) return log("❌ 트렌드 부족", "fail");
+    const cost = parseMoney(document.getElementById("cost_trend2edge").value);
+    if (state.balance < cost) return log("❌ 잔고 부족", "fail");
+
+    const targetRate = getDynamicRate(0.10);
+    simulateFakeUsers(0.10);
+
+    state.trend -= 3;
+    state.balance -= cost;
+    state.spent += cost;
+
+    if (Math.random() < targetRate) {
+      state.edge++;
+      log("🎯 트렌드→엣지 성공!", "success");
+    } else {
+      state.trend += 1; // 1개 반환
+      log("💥 트렌드→엣지 실패 (트렌드 1개 반환)", "fail");
     }
-    initStorage();
+  }
 
-    // 현재 누적값 표시
-    function updateDisplay() {
-      document.getElementById('totalAttempts').innerText = localStorage.getItem('totalAttempts');
-      document.getElementById('totalSuccesses').innerText = localStorage.getItem('totalSuccesses');
+  if (type === 'edge2prest') {
+    if (state.edge < 2) return log("❌ 엣지 부족", "fail");
+    const cost = parseMoney(document.getElementById("cost_edge2prest").value);
+    if (state.balance < cost) return log("❌ 잔고 부족", "fail");
+
+    const targetRate = getDynamicRate(0.05);
+    simulateFakeUsers(0.05);
+
+    state.edge -= 2;
+    state.balance -= cost;
+    state.spent += cost;
+    state.prestige_attempts++;
+
+    if (Math.random() < targetRate) {
+      state.prestige++;
+      state.prestige_success++;
+      log("🏆 엣지→프레스티지 성공!", "success");
+    } else {
+      state.edge += 1;
+      log("❌ 엣지→프레스티지 실패 (엣지 1개 반환)", "fail");
     }
+  }
 
-    // 동적 확률 계산 (서버공유 가정)
-    function getDynamicRate(target) {
-      const attempts = +localStorage.getItem('totalAttempts');
-      const successes = +localStorage.getItem('totalSuccesses');
-      if (attempts === 0) return target;
-      const actual = successes / attempts;
-      const coef = 2;  // 반응속도 계수
-      let adj = (target/100 - actual) * coef;
-      let rate = target/100 + adj;
-      rate = Math.max(0.001, Math.min(1, rate));
-      return rate;
+  updateStatus();
+}
+
+function updateStatus() {
+  const market = parseMoney(document.getElementById("prest_price").value);
+  const status = document.getElementById("status");
+  let result = `
+💰 잔고: ${formatMoney(state.balance)} 골드
+👕 트렌드: ${state.trend}개
+🧥 엣지: ${state.edge}개
+👑 프레스티지: ${state.prestige}개
+🔁 프레스티지 시도: ${state.prestige_attempts}회
+✅ 성공 횟수: ${state.prestige_success}회
+💸 총 소비 금액: ${formatMoney(state.spent)} 골드`;
+
+  if (state.prestige_success > 0) {
+    const avgCost = state.spent / state.prestige_success;
+    const diff = avgCost - market;
+    const percent = (diff / market) * 100;
+    if (diff > 0) {
+      result += `\n📈 평균 제작비가 시장가보다 ${formatMoney(Math.abs(diff))}골드 (${percent.toFixed(2)}%) 더 비쌉니다.`;
+    } else {
+      result += `\n📉 평균 제작비가 시장가보다 ${formatMoney(Math.abs(diff))}골드 (${Math.abs(percent).toFixed(2)}%) 더 저렴합니다.`;
     }
+  }
 
-    // 가상 유저 시뮬레이션 누적
-    function simulateFakes() {
-      const min = +document.getElementById('fakeMin').value;
-      const max = +document.getElementById('fakeMax').value;
-      const count = Math.floor(Math.random()*(max-min+1)) + min;
-      for (let i=0; i<count; i++) {
-        const rate = getDynamicRate(currentContext==='trend'? +document.getElementById('targetTrend').value : +document.getElementById('targetPrest').value);
-        localStorage.totalAttempts = +localStorage.totalAttempts + 1;
-        if (Math.random() < rate) {
-          localStorage.totalSuccesses = +localStorage.totalSuccesses + 1;
-        }
-      }
-    }
+  status.innerText = result;
+}
 
-    let currentContext = null;
-    function tryUpgrade(which) {
-      currentContext = which;
-      // 1) 가상 유저 누적
-      simulateFakes();
+function log(msg, type) {
+  const box = document.getElementById("log");
+  const line = document.createElement("div");
+  line.className = type;
+  line.innerText = msg;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
 
-      // 2) 실제 1회 도전
-      const target = which==='trend'
-                   ? +document.getElementById('targetTrend').value
-                   : +document.getElementById('targetPrest').value;
-      const rate = getDynamicRate(target);
-      localStorage.totalAttempts = +localStorage.totalAttempts + 1;
-      const ok = Math.random() < rate;
-      if (ok) localStorage.totalSuccesses = +localStorage.totalSuccesses + 1;
+function reset() {
+  state = {
+    balance: parseMoney(document.getElementById("balance_start").value),
+    trend: 0,
+    edge: 0,
+    prestige: 0,
+    spent: 0,
+    prestige_success: 0,
+    prestige_attempts: 0
+  };
+  document.getElementById("log").innerHTML = "";
+  localStorage.setItem("totalAttempts", "0");
+  localStorage.setItem("totalSuccesses", "0");
+  updateStatus();
+}
 
-      // 3) 로그 및 화면 갱신
-      const log = document.getElementById('log');
-      const line = `[${which==='trend'?'T→E':'E→P'}] ` +
-                   (ok ? `%c성공` : `%c실패`) +
-                   ` (확률 ${ (rate*100).toFixed(2) }%)`;
-      // 색상 적용
-      log.insertAdjacentHTML('beforeend',
-        line.replace('%c성공', '<span style="color:red">성공</span>')
-            .replace('%c실패', '<span style="color:blue">실패</span>')
-        + '<br>');
-      log.scrollTop = log.scrollHeight;
-
-      updateDisplay();
-      document.getElementById('currentRate').innerText = (rate*100).toFixed(2);
-    }
-
-    function resetAll() {
-      localStorage.setItem('totalAttempts','0');
-      localStorage.setItem('totalSuccesses','0');
-      document.getElementById('log').innerText = '';
-      updateDisplay();
-      document.getElementById('currentRate').innerText = '-';
-    }
-  </script>
+reset();
+</script>
 
 </body>
 </html>
