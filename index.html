@@ -2,27 +2,64 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>파이널 데스티 시뮬레이터</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>미스틱 아틀리에 시뮬레이터</title>
   <style>
-    body { font-family: sans-serif; max-width: 700px; margin: 20px auto; }
-    input, button { font-size: 1rem; padding: .4rem; margin: .3rem 0; }
-    input[type="text"] { width: 200px; }
-    .log { white-space: pre-wrap; background: #f1f1f1; padding: 10px; height: 200px; overflow-y: auto; border: 1px solid #ccc; }
+    body {
+      font-family: sans-serif;
+      margin: 10px;
+      padding: 0 10px;
+      max-width: 100%;
+    }
+    input, button {
+      font-size: 1.1rem;
+      padding: .6rem;
+      margin: .3rem 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    .log {
+      white-space: pre-wrap;
+      background: #f1f1f1;
+      padding: 10px;
+      height: 180px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      font-size: 0.95rem;
+    }
     .success { color: red; }
     .fail { color: blue; }
+    h1, h3 {
+      text-align: center;
+    }
   </style>
 </head>
 <body>
 
-<h1>🎲 파이널 데스티 시뮬레이터</h1>
+<h1>🎲 미스틱 아틀리에 시뮬레이터</h1>
 
 <div>
-  <label>💰 초기 잔고: <input id="balance_start" type="text" value="3,000,000,000"></label><br>
-  <label>👕 트렌드 1개 가격: <input id="trend_price" type="text" value="2,500,000"></label><br>
-  <label>🧥 엣지 1개 가격: <input id="edge_price" type="text" value="40,000,000"></label><br>
-  <label>👑 프레스티지 시장가: <input id="prest_price" type="text" value="600,000,000"></label><br>
-  <label>💵 트렌드→엣지 비용: <input id="cost_trend2edge" type="text" value="2,000,000"></label><br>
-  <label>💵 엣지→프레스티지 비용: <input id="cost_edge2prest" type="text" value="4,200,000"></label>
+  <label>💰 초기 잔고</label>
+  <input id="balance_start" type="text" value="3,000,000,000">
+
+  <label>👕 트렌드 1개 가격</label>
+  <input id="trend_price" type="text" value="2,500,000">
+
+  <label>🧥 엣지 1개 가격</label>
+  <input id="edge_price" type="text" value="40,000,000">
+
+  <label>👑 프레스티지 시장가</label>
+  <input id="prest_price" type="text" value="600,000,000">
+
+  <label>💵 트렌드→엣지 비용</label>
+  <input id="cost_trend2edge" type="text" value="2,000,000">
+
+  <label>💵 엣지→프레스티지 비용</label>
+  <input id="cost_edge2prest" type="text" value="4,200,000">
 </div>
 
 <hr>
@@ -30,12 +67,10 @@
 <div>
   <button onclick="buy('trend')">트렌드 구매</button>
   <button onclick="buy('edge')">엣지 구매</button>
-</div>
-<div>
   <button onclick="upgrade('trend2edge')">트렌드→엣지 도전</button>
   <button onclick="upgrade('edge2prest')">엣지→프레스티지 도전</button>
+  <button onclick="reset()">🔄 초기화</button>
 </div>
-<button onclick="reset()">🔄 초기화</button>
 
 <h3>📊 결과</h3>
 <div id="status"></div>
@@ -65,29 +100,26 @@ function getDynamicRate(target) {
   const attempts = parseInt(localStorage.getItem("totalAttempts") || "0");
   const successes = parseInt(localStorage.getItem("totalSuccesses") || "0");
   if (attempts === 0) return target;
-
   const actual = successes / attempts;
   const coef = 2;
   let adj = (target - actual) * coef;
-  let result = target + adj;
-  return Math.max(0.001, Math.min(1.0, result));
+  return Math.max(0.001, Math.min(1.0, target + adj));
 }
 
 function simulateFakeUsers(rate) {
   const count = Math.floor(Math.random() * 101) + 100;
   let attempts = parseInt(localStorage.getItem("totalAttempts") || "0");
   let successes = parseInt(localStorage.getItem("totalSuccesses") || "0");
-
   for (let i = 0; i < count; i++) {
     attempts++;
     if (Math.random() < rate) successes++;
   }
-
   localStorage.setItem("totalAttempts", attempts);
   localStorage.setItem("totalSuccesses", successes);
 }
 
 function buy(type) {
+  if (state.prestige >= 4) return;
   const price = parseMoney(document.getElementById(type + "_price").value);
   if (state.balance >= price) {
     state[type]++;
@@ -101,23 +133,22 @@ function buy(type) {
 }
 
 function upgrade(type) {
+  if (state.prestige >= 4) return;
+
   if (type === 'trend2edge') {
     if (state.trend < 3) return log("❌ 트렌드 부족", "fail");
     const cost = parseMoney(document.getElementById("cost_trend2edge").value);
     if (state.balance < cost) return log("❌ 잔고 부족", "fail");
-
     const targetRate = getDynamicRate(0.10);
     simulateFakeUsers(0.10);
-
     state.trend -= 3;
     state.balance -= cost;
     state.spent += cost;
-
     if (Math.random() < targetRate) {
       state.edge++;
       log("🎯 트렌드→엣지 성공!", "success");
     } else {
-      state.trend += 1; // 1개 반환
+      state.trend += 1;
       log("💥 트렌드→엣지 실패 (트렌드 1개 반환)", "fail");
     }
   }
@@ -126,19 +157,19 @@ function upgrade(type) {
     if (state.edge < 2) return log("❌ 엣지 부족", "fail");
     const cost = parseMoney(document.getElementById("cost_edge2prest").value);
     if (state.balance < cost) return log("❌ 잔고 부족", "fail");
-
     const targetRate = getDynamicRate(0.05);
     simulateFakeUsers(0.05);
-
     state.edge -= 2;
     state.balance -= cost;
     state.spent += cost;
     state.prestige_attempts++;
-
     if (Math.random() < targetRate) {
       state.prestige++;
       state.prestige_success++;
       log("🏆 엣지→프레스티지 성공!", "success");
+      if (state.prestige >= 4) {
+        alert("🎉 프레스티지 4개 제작 완료! 시뮬레이션이 종료됩니다.");
+      }
     } else {
       state.edge += 1;
       log("❌ 엣지→프레스티지 실패 (엣지 1개 반환)", "fail");
