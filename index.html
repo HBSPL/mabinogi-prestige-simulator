@@ -240,8 +240,23 @@ function loadState() {
     } catch (e) {
       console.error("불러오기 실패, 기본값으로 초기화됨");
     }
+  } else {
+    // 처음 방문한 사용자일 경우 초기값으로 설정
+    state = {
+      balance: parseMoney(document.getElementById("balance_start").value),
+      trend: 0,
+      edge: 0,
+      prestige: 0,
+      spent: 0,
+      prestige_success: 0,
+      prestige_attempts: 0,
+      trend2edge_attempts: 0,
+      trend2edge_success: 0
+    };
+    saveState(); // 저장해두기
   }
 }
+
 
 function updateStatus() {
   const market = parseMoney(document.getElementById("prest_price").value);
