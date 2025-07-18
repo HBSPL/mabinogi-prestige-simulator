@@ -219,10 +219,10 @@ function updateStatus() {
 👕 트렌드: ${state.trend}개
 🧥 엣지: ${state.edge}개
 🧪 트렌드→엣지 시도: ${state.trend2edge_attempts}회
-🎯 성공: ${state.trend2edge_success}회 (${state.trend2edge_attempts > 0 ? ((state.trend2edge_success / state.trend2edge_attempts) * 100).toFixed(1) : 0}%)
+🎯 트렌드→엣지 성공: ${state.trend2edge_success}회 (${state.trend2edge_attempts > 0 ? ((state.trend2edge_success / state.trend2edge_attempts) * 100).toFixed(1) : 0}%)
 👑 프레스티지: ${state.prestige}개
 🔁 프레스티지 시도: ${state.prestige_attempts}회
-✅ 성공 횟수: ${state.prestige_success}회
+✅ 프레스티지 성공: ${state.prestige_success}회 (${state.prestige_attempts > 0 ? ((state.prestige_success / state.prestige_attempts) * 100).toFixed(1) : 0}%)
 💸 총 소비 금액: ${formatMoney(state.spent)} 골드`;
 
   if (state.prestige_success > 0) {
