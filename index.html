@@ -104,8 +104,11 @@ let state = {
   prestige: 0,
   spent: 0,
   prestige_success: 0,
-  prestige_attempts: 0
+  prestige_attempts: 0,
+  trend2edge_attempts: 0,
+  trend2edge_success: 0
 };
+
 
 function toggleConfig() {
   const config = document.getElementById("config");
@@ -163,13 +166,18 @@ function upgrade(type) {
     if (state.trend < 3) return log("❌ 트렌드 부족", "fail");
     const cost = parseMoney(document.getElementById("cost_trend2edge").value);
     if (state.balance < cost) return log("❌ 잔고 부족", "fail");
+
     const targetRate = getDynamicRate(0.10);
     simulateFakeUsers(0.10);
+
     state.trend -= 3;
     state.balance -= cost;
     state.spent += cost;
+    state.trend2edge_attempts++; // 추가
+
     if (Math.random() < targetRate) {
       state.edge++;
+      state.trend2edge_success++; // 추가
       log("🎯 트렌드→엣지 성공!", "success");
     } else {
       state.trend += 1;
@@ -210,6 +218,8 @@ function updateStatus() {
 💰 잔고: ${formatMoney(state.balance)} 골드
 👕 트렌드: ${state.trend}개
 🧥 엣지: ${state.edge}개
+🧪 트렌드→엣지 시도: ${state.trend2edge_attempts}회
+🎯 성공: ${state.trend2edge_success}회 (${state.trend2edge_attempts > 0 ? ((state.trend2edge_success / state.trend2edge_attempts) * 100).toFixed(1) : 0}%)
 👑 프레스티지: ${state.prestige}개
 🔁 프레스티지 시도: ${state.prestige_attempts}회
 ✅ 성공 횟수: ${state.prestige_success}회
@@ -247,6 +257,8 @@ function reset() {
     spent: 0,
     prestige_success: 0,
     prestige_attempts: 0
+    trend2edge_attempts: 0,
+    trend2edge_success: 0
   };
   document.getElementById("log").innerHTML = "";
   localStorage.setItem("totalAttempts", "0");
